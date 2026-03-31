@@ -973,7 +973,7 @@ async function startBatchGen(){
       card.querySelector('span:last-child').textContent='生成中...';
 
       let done=false;
-      for(let t=0;t<60;t++){
+      for(let t=0;t<90;t++){
         await new Promise(r=>setTimeout(r,2000));
         try{
           const qRes=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'query',task_id:submitData.task_id})});
