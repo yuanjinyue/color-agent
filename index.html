@@ -835,6 +835,26 @@ if(savedUser){ S.user=savedUser; document.getElementById('loginOverlay').style.d
     <button class="btn sm" onclick="goTab(0)" style="flex-shrink:0">← 修改提示词配置</button>
   </div>
   <div class="section">
+    <div class="slabel">参考图（手板照片）</div>
+    <div id="refImgArea" style="display:flex;gap:12px;align-items:flex-start;">
+      <div id="refImgPlaceholder" style="position:relative;width:120px;height:120px;border:2px dashed var(--border-strong);border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--surface);flex-shrink:0;" onclick="document.getElementById('refImgInput').click()">
+        <input type="file" id="refImgInput" accept="image/*" style="display:none" onchange="loadRefImg(this)">
+        <div style="font-size:24px;color:var(--text3);margin-bottom:4px;">+</div>
+        <div style="font-size:11px;color:var(--text3);text-align:center;">上传手板图</div>
+      </div>
+      <div id="refImgPreview" style="display:none;position:relative;width:120px;height:120px;flex-shrink:0;">
+        <img id="refImgThumb" style="width:120px;height:120px;object-fit:cover;border-radius:var(--radius);border:2px solid var(--green);">
+        <button onclick="clearRefImg()" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--red);color:white;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;">✕</button>
+      </div>
+      <div style="flex:1;font-size:12px;color:var(--text3);line-height:1.8;padding-top:8px;">
+        上传你的手板俯视图作为参考<br>
+        AI 会在产品基础上替换颜色和材质<br>
+        <span style="color:var(--amber);">⚠ 不上传则纯文字生图，效果会偏差</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
     <div class="slabel">配色方向（最多 4 个）</div>
     <div id="batchColorList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
     <button class="btn sm" onclick="addBatchColor()" style="width:100%;border-style:dashed;">+ 添加配色</button>
@@ -947,7 +967,8 @@ async function startBatchGen(){
     wall.appendChild(card);
 
     try{
-      const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,req_key:batchModel,width:w,height:h,seed:-1})});
+      const refB64 = window._refImgBase64 || null;
+      const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,width:w,height:h,seed:-1,ref_image_base64:refB64})});
       const data=await res.json();
       if(data.success&&data.urls?.length){
         const url=data.urls[0];
@@ -996,6 +1017,23 @@ async function sendBatchToWall(){
 }
 
 // ══ 更新 goTab 支持 tab4 ══
+function loadRefImg(input){
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    window._refImgBase64=e.target.result;
+    document.getElementById('refImgThumb').src=e.target.result;
+    document.getElementById('refImgPlaceholder').style.display='none';
+    document.getElementById('refImgPreview').style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+function clearRefImg(){
+  window._refImgBase64=null;
+  document.getElementById('refImgInput').value='';
+  document.getElementById('refImgPlaceholder').style.display='flex';
+  document.getElementById('refImgPreview').style.display='none';
+}
 function goToBatch(){
   // Store current prompt config for batch use
   const promptText = document.getElementById('promptBody')?.textContent || '';
