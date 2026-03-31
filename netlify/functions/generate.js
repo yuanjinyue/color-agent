@@ -77,25 +77,20 @@ exports.handler = async (event) => {
 
     let data;
     if (ref_image_base64) {
-      // 去掉 data:image/xxx;base64, 前缀，只保留纯 base64
+      // 图生图：使用图片4.0接口，支持参考图编辑
       const base64 = ref_image_base64.replace(/^data:image\/[a-z+]+;base64,/, '');
-      
-      // 图生图：使用正确的 req_key 和参数格式
       data = await callVolc(AK, SK, 'CVSync2AsyncSubmitTask', {
-        req_key: 'jimeng_img2img_v3',
+        req_key: 'jimeng_picture_4_0',
         prompt,
         binary_data_base64: [base64],
-        strength: 0.7,
-        seed: seed,
-        scale: 3.5,
+        seed,
         width,
         height,
-        use_pre_enhance: false,
         return_url: true,
         logo_info: { add_logo: false },
       });
     } else {
-      // 文生图
+      // 文生图：使用文生图3.0
       data = await callVolc(AK, SK, 'CVSync2AsyncSubmitTask', {
         req_key: 'jimeng_t2i_v30',
         prompt,
@@ -111,7 +106,7 @@ exports.handler = async (event) => {
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ error: data.message || '提交失败', code: data.code, detail: data })
+        body: JSON.stringify({ error: data.message || '提交失败', code: data.code })
       };
     }
 
