@@ -65,7 +65,7 @@ exports.handler = async (event) => {
 
   // 使用 high_aes_general_v30 — 即梦文生图3.0 正式 req_key
   const volcBody = JSON.stringify({
-    req_key: 'high_aes_general_v30',
+    req_key: 'jimeng_t2i_v30',
     prompt,
     seed,
     width,
