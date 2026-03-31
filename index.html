@@ -329,7 +329,8 @@ const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';                  // 替换这里
       <div class="prompt-body" id="promptBody"></div>
       <div class="prompt-foot">
         <button class="btn" onclick="copyPrompt()">复制提示词</button>
-        <button class="btn primary" onclick="goTab(1)">去上传效果图 →</button>
+        <button class="btn" onclick="goTab(1)">去上传效果图</button>
+        <button class="btn primary" onclick="goToBatch()">去批量生图 ✦</button>
       </div>
     </div>
   </div>
@@ -912,7 +913,7 @@ async function startBatchGen(){
   const colors=batchColors.filter(c=>c.color.trim());
   if(!colors.length){toast('请填写配色方向');return;}
   const basePrompt=document.getElementById('promptBody')?.textContent||'';
-  if(!basePrompt.includes('支架')){toast('请先在①配置好提示词');return;}
+  if(!basePrompt || basePrompt.length < 10){toast('请先在①配置好提示词，选择材质颜色场景');return;}
 
   document.getElementById('batchGenBtn').disabled=true;
   document.getElementById('batchGenBtn').textContent='生成中...';
@@ -925,7 +926,16 @@ async function startBatchGen(){
 
   for(let i=0;i<colors.length;i++){
     const colorName=colors[i].color.trim();
-    const prompt=basePrompt.replace(/[一-龥a-zA-Z0-9 ]+(?=颜色)/,colorName);
+    // Build prompt by replacing color in base prompt
+    let prompt = basePrompt;
+    // Try to replace color name before 颜色
+    const colorMatch = prompt.match(/([\u4e00-\u9fa5a-zA-Z0-9 ]+)(?=颜色)/);
+    if(colorMatch) {
+      prompt = prompt.replace(colorMatch[0], colorName);
+    } else {
+      // Fallback: append color info
+      prompt = basePrompt + '，颜色为' + colorName;
+    }
     document.getElementById('batchStatusText').textContent=`生成 ${i+1}/${colors.length}：${colorName}...`;
     document.getElementById('batchProgressFill').style.width=`${Math.round(i/colors.length*100)}%`;
 
@@ -986,6 +996,16 @@ async function sendBatchToWall(){
 }
 
 // ══ 更新 goTab 支持 tab4 ══
+function goToBatch(){
+  // Store current prompt config for batch use
+  const promptText = document.getElementById('promptBody')?.textContent || '';
+  if(!promptText.includes('支架')){
+    toast('请先配置提示词（选择材质、颜色、场景）');
+    return;
+  }
+  renderBatchColorList();
+  goTab(4);
+}
 const _gt=goTab;
 goTab=function(i){
   const pages=document.querySelectorAll('.page');
