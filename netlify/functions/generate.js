@@ -60,7 +60,7 @@ exports.handler = async (event) => {
   try { reqBody = JSON.parse(event.body); }
   catch { return { statusCode: 400, headers, body: JSON.stringify({ error: '请求格式错误' }) }; }
 
-  const { action, prompt, width = 1024, height = 1024, seed = -1, ref_image_base64, task_id } = reqBody;
+  const { action, prompt, width = 1024, height = 1024, seed = -1, ref_image_base64, task_id, model } = reqBody;
 
   try {
     // ── 查询任务结果 ──
@@ -80,7 +80,7 @@ exports.handler = async (event) => {
       // 图生图：使用图片4.0接口，支持参考图编辑
       const base64 = ref_image_base64.replace(/^data:image\/[a-z+]+;base64,/, '');
       data = await callVolc(AK, SK, 'CVSync2AsyncSubmitTask', {
-        req_key: 'jimeng_i2i_v30',
+        req_key: reqBody.model || 'jimeng_i2i_v30',
         prompt,
         binary_data_base64: [base64],
         seed,
