@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>配色选品 Agent</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#F5F4F0;--surface:#FFF;--surface2:#F0EFE9;
+  --border:rgba(0,0,0,.08);--border-strong:rgba(0,0,0,.16);
+  --text:#1A1916;--text2:#6B6860;--text3:#A8A79F;
+  --green:#3A7D52;--green-light:#EAF3EE;
+  --amber:#A05C1A;--amber-light:#FDF3E7;
+  --red:#C0392B;--red-light:#FDF0EF;
+  --radius:10px;--radius-sm:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* Login */
+.login-overlay{position:fixed;inset:0;background:rgba(245,244,240,.97);display:flex;align-items:center;justify-content:center;z-index:300;}
+.login-box{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);padding:36px 40px;width:360px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08);}
+.login-title{font-size:20px;font-weight:500;margin-bottom:6px;}
+.login-sub{font-size:13px;color:var(--text3);margin-bottom:28px;line-height:1.6;}
+.login-input{width:100%;height:44px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 16px;font-size:15px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:12px;text-align:center;background:var(--surface2);}
+.login-input:focus{border-color:var(--text);background:var(--surface);}
+.login-btn{width:100%;height:44px;background:var(--text);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s;}
+.login-btn:hover{opacity:.85;}
+
+/* Config banner */
+.cfg-banner{background:#FFF8E6;border-bottom:2px solid #F5C842;padding:10px 28px;font-size:12px;color:#7A5010;display:flex;align-items:center;gap:10px;}
+
+/* Header */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;gap:16px;height:52px;position:sticky;top:0;z-index:100;}
+.logo{font-size:13px;font-weight:500;letter-spacing:.06em;white-space:nowrap;}
+.logo span{color:var(--text3);font-weight:400;}
+.tabs{display:flex;gap:3px;flex:1;overflow-x:auto;}
+.tab{padding:5px 14px;border-radius:20px;font-size:13px;color:var(--text2);cursor:pointer;border:none;background:none;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s;}
+.tab:hover{background:var(--surface2);color:var(--text);}
+.tab.active{background:var(--text);color:white;font-weight:500;}
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--red);color:white;font-size:10px;margin-left:4px;}
+.user-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;border:1px solid var(--border-strong);font-size:12px;cursor:pointer;background:var(--surface);white-space:nowrap;flex-shrink:0;}
+.user-dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
+
+/* Layout */
+.main{max-width:1080px;margin:0 auto;padding:28px 28px 80px;}
+.page{display:none;}.page.active{display:block;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.section{margin-bottom:22px;}
+.slabel{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+
+/* Chips */
+.chip-row{display:flex;flex-wrap:wrap;gap:7px;}
+.chip{padding:5px 13px;border-radius:20px;border:1px solid var(--border-strong);font-size:12px;color:var(--text2);cursor:pointer;background:var(--surface);font-family:'DM Sans',sans-serif;transition:all .12s;}
+.chip:hover{border-color:var(--text);color:var(--text);}
+.chip.on{background:var(--text);color:white;border-color:var(--text);}
+
+/* Color input */
+.color-row{display:flex;gap:8px;align-items:center;margin-bottom:9px;}
+.color-dot{width:28px;height:28px;border-radius:50%;border:1px solid var(--border-strong);flex-shrink:0;transition:background .2s;}
+.text-input{flex:1;height:36px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 12px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--surface);outline:none;}
+.text-input:focus{border-color:var(--text);}
+.text-input::placeholder{color:var(--text3);}
+.swatches{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+.sw-item{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.sw{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:border-color .1s;}
+.sw:hover,.sw.on{border-color:var(--text);}
+.sw-label{font-size:9px;color:var(--text3);text-align:center;width:28px;}
+
+/* Scene */
+.scene-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.scene-card{border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 10px;cursor:pointer;background:var(--surface);transition:border-color .12s;}
+.scene-card:hover{border-color:var(--border-strong);}
+.scene-card.on{border:1.5px solid var(--text);background:var(--surface2);}
+.scene-name{font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.scene-sub{font-size:11px;color:var(--text3);}
+.scene-textarea{width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--surface2);outline:none;resize:none;min-height:40px;}
+.scene-textarea:focus{border-color:var(--border-strong);}
+.scene-textarea::placeholder{color:var(--text3);}
+
+/* Prompt output */
+.prompt-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.prompt-head{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text2);font-weight:500;}
+.prompt-body{padding:12px 14px;font-family:'DM Mono',monospace;font-size:12px;line-height:1.9;color:var(--text);white-space:pre-wrap;word-break:break-all;min-height:60px;}
+.prompt-foot{padding:9px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;}
+.lang-btn{padding:3px 9px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-family:'DM Sans',sans-serif;}
+.lang-btn.on{background:var(--text);color:white;border-color:var(--text);}
+
+/* Buttons */
+.btn{padding:7px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;transition:all .12s;}
+.btn:hover{background:var(--surface2);}
+.btn.primary{background:var(--text);color:white;border-color:var(--text);}
+.btn.primary:hover{opacity:.85;}
+.btn.sm{padding:4px 11px;font-size:11px;}
+.btn:disabled{opacity:.4;cursor:default;}
+
+/* Settings */
+.setting-row{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.setting-row:last-child{border-bottom:none;}
+.sk{color:var(--text3);min-width:72px;flex-shrink:0;padding-top:1px;}
+.sv{color:var(--text);line-height:1.6;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+.card-body{padding:14px 18px;}
+
+/* Notice */
+.notice{padding:8px 12px;border-radius:var(--radius-sm);font-size:12px;line-height:1.7;margin-top:9px;}
+
+/* Upload zone */
+.upload-zone{border:2px dashed var(--border-strong);border-radius:var(--radius);padding:28px;text-align:center;cursor:pointer;background:var(--surface);position:relative;transition:background .15s;}
+.upload-zone:hover{background:var(--surface2);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-icon{width:38px;height:38px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;color:var(--text3);}
+.upload-label{font-size:14px;font-weight:500;margin-bottom:3px;}
+.upload-sub{font-size:12px;color:var(--text3);}
+
+/* Image wall */
+.image-wall{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+.img-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden;transition:border-color .12s;}
+.img-card.shortlisted{border:2px solid var(--green);}
+.img-card.pending{border:2px solid var(--amber);}
+.img-card.eliminated{border:2px solid var(--red);opacity:.5;}
+.img-thumb{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--surface2);}
+.img-info{padding:7px 9px;}
+.img-name{font-size:12px;font-weight:500;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.img-by{font-size:10px;color:var(--text3);margin-bottom:5px;}
+.status-row{display:flex;gap:3px;}
+.sbtn{flex:1;padding:4px 2px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;}
+.sbtn.s{background:var(--green-light);color:var(--green);}
+.sbtn.p{background:var(--amber-light);color:var(--amber);}
+.sbtn.e{background:var(--red-light);color:var(--red);}
+.sbtn.active{filter:saturate(1.6) brightness(.88);font-weight:700;}
+
+/* Vote wall */
+.vote-wall{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+.vote-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden;}
+.vote-img{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--surface2);display:block;}
+.vote-body{padding:11px 13px;}
+.vote-name{font-size:13px;font-weight:500;margin-bottom:7px;}
+.stars{display:flex;gap:3px;margin-bottom:7px;}
+.star{font-size:22px;cursor:pointer;color:var(--border-strong);line-height:1;user-select:none;transition:color .1s;}
+.star.on{color:#F0A030;}
+.vote-input{width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 9px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--surface2);resize:none;outline:none;min-height:42px;}
+.vote-save{margin-top:8px;width:100%;padding:6px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);background:transparent;color:var(--text);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.vote-save:hover{background:var(--surface2);}
+.vote-save.saved{background:var(--green-light);color:var(--green);border-color:transparent;}
+.vote-bar{height:3px;background:var(--border);border-radius:2px;margin-top:8px;}
+.vote-fill{height:3px;border-radius:2px;background:var(--text);transition:width .3s;}
+.vote-meta{font-size:10px;color:var(--text3);margin-top:4px;display:flex;justify-content:space-between;align-items:center;}
+.my-badge{font-size:10px;padding:1px 7px;border-radius:20px;background:var(--green-light);color:var(--green);}
+.vote-list{font-size:10px;color:var(--text3);margin-top:5px;line-height:1.8;}
+
+/* Report */
+.rpt-header{background:var(--text);color:white;padding:22px 26px;border-radius:var(--radius);margin-bottom:18px;}
+.rpt-title{font-size:17px;font-weight:500;margin-bottom:3px;}
+.rpt-sub{font-size:12px;opacity:.5;}
+.rpt-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
+.rpt-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.rpt-card-title{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px;}
+.rpt-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.rpt-row:last-child{border-bottom:none;}
+.rpt-k{color:var(--text3);}
+.rpt-v{color:var(--text);font-weight:500;text-align:right;flex:1;margin-left:12px;}
+.winner-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:20px;background:var(--green-light);color:var(--green);font-size:12px;font-weight:500;margin-bottom:7px;}
+.copy-area{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.9;color:var(--text2);white-space:pre-wrap;margin-bottom:10px;}
+
+/* Loader / empty */
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{text-align:center;padding:40px;color:var(--text3);font-size:13px;}
+.empty{text-align:center;padding:44px 20px;color:var(--text3);}
+.empty-icon{font-size:28px;margin-bottom:10px;opacity:.3;}
+
+/* Progress bar for upload */
+.upload-progress{height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;display:none;}
+.upload-progress-fill{height:3px;background:var(--text);border-radius:2px;transition:width .3s;width:0%;}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:white;padding:9px 22px;border-radius:20px;font-size:12px;z-index:999;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+
+/* Config modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center;}
+.modal{background:var(--surface);border-radius:var(--radius);padding:28px 32px;width:480px;max-width:94vw;}
+.modal-title{font-size:16px;font-weight:500;margin-bottom:4px;}
+.modal-sub{font-size:12px;color:var(--text3);margin-bottom:20px;line-height:1.7;}
+.field{margin-bottom:12px;}
+.field label{font-size:11px;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;}
+.field input{width:100%;height:36px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 10px;font-size:12px;font-family:'DM Mono',monospace;outline:none;background:var(--surface2);}
+.field input:focus{border-color:var(--text);background:var(--surface);}
+.modal-actions{display:flex;gap:8px;margin-top:20px;}
+</style>
+</head>
+<body>
+
+<!-- ── SUPABASE CONFIG (填入你的 key) ── -->
+<script>
+// ⚠️ 部署前填入你的 Supabase 信息
+// 在 Supabase Dashboard → Settings → API 找到这两个值
+const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';   // 替换这里
+const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';                  // 替换这里
+</script>
+
+<!-- ── LOGIN ── -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-title">配色选品 Agent</div>
+    <div class="login-sub">输入姓名开始使用<br>团队成员各自填写，投票结果实时互通</div>
+    <input class="login-input" id="nameInput" placeholder="你的姓名" maxlength="20"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">进入</button>
+  </div>
+</div>
+
+<!-- ── CONFIG MODAL ── -->
+<div class="modal-overlay" id="cfgModal" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Supabase 配置</div>
+    <div class="modal-sub">在 Supabase Dashboard → Settings → API 找到以下信息。<br>配置后刷新页面生效。</div>
+    <div class="field"><label>Project URL</label><input id="cfgUrl" placeholder="https://xxxx.supabase.co"></div>
+    <div class="field"><label>Anon Public Key</label><input id="cfgKey" placeholder="eyJhbGciOi..." type="password"></div>
+    <div class="modal-actions">
+      <button class="btn primary" onclick="saveCfg()">保存并刷新</button>
+      <button class="btn" onclick="closeCfg()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── HEADER ── -->
+<div class="header">
+  <div class="logo">配色选品 <span>Agent</span></div>
+  <div class="tabs">
+    <button class="tab active" onclick="goTab(0)">① 提示词生成</button>
+    <button class="tab" onclick="goTab(4)">② 批量生图 ✦</button>
+    <button class="tab" onclick="goTab(1)">③ 效果图管理 <span class="tab-badge" id="imgBadge" style="display:none">0</span></button>
+    <button class="tab" onclick="goTab(2)">④ 团队投票</button>
+    <button class="tab" onclick="goTab(3)">⑤ 选品报告</button>
+  </div>
+  <div class="user-pill" onclick="changeUser()" id="userPill">
+    <div class="user-dot"></div><span id="uname">—</span>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ══ TAB 1 ══ -->
+<div class="page active" id="page0">
+  <div class="section">
+    <div class="slabel">外圈材质</div>
+    <div class="chip-row" id="matChips">
+      <div class="chip on" data-v="pcabs">PC+ABS 塑壳</div>
+      <div class="chip" data-v="alu">阳极氧化铝</div>
+      <div class="chip" data-v="tpu">TPU 软胶</div>
+      <div class="chip" data-v="zinc">锌合金</div>
+    </div>
+    <div class="notice" id="matTip" style="background:var(--surface2);color:var(--text2);"></div>
+  </div>
+
+  <div class="section">
+    <div class="slabel">外圈颜色</div>
+    <div class="color-row">
+      <div class="color-dot" id="colorDot" style="background:#D4B07A"></div>
+      <input class="text-input" id="colorInput" placeholder="输入颜色名 / Pantone编号 / 色感描述，或点下方色板快选" oninput="onColorInput(this.value)">
+    </div>
+    <div class="swatches" id="swatches"></div>
+  </div>
+
+  <div class="two-col">
+    <div class="section">
+      <div class="slabel">表面工艺</div>
+      <div class="chip-row" id="finishChips">
+        <div class="chip on" data-v="matte">哑光</div>
+        <div class="chip" data-v="glossy">高光</div>
+        <div class="chip" data-v="frosted">磨砂</div>
+        <div class="chip" data-v="pearl">珠光</div>
+        <div class="chip" data-v="trans">半透明</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="slabel">内圈颜色</div>
+      <div class="chip-row" id="innerChips">
+        <div class="chip on" data-v="silver">银色</div>
+        <div class="chip" data-v="black">哑黑</div>
+        <div class="chip" data-v="match">与外圈同色</div>
+        <div class="chip" data-v="gold">香槟金</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="slabel">背景场景</div>
+    <div class="scene-grid">
+      <div class="scene-card on" data-s="body" onclick="pickScene(this)">
+        <div class="scene-name">手机机身</div><div class="scene-sub">贴在手机背面</div>
+      </div>
+      <div class="scene-card" data-s="case" onclick="pickScene(this)">
+        <div class="scene-name">手机壳</div><div class="scene-sub">贴在手机壳上</div>
+      </div>
+      <div class="scene-card" data-s="white" onclick="pickScene(this)">
+        <div class="scene-name">纯白底</div><div class="scene-sub">电商独立展示</div>
+      </div>
+    </div>
+    <textarea class="scene-textarea" id="sceneNote" rows="2"
+      placeholder="描述手机机身颜色，例如：香槟金 iPhone / 深紫色机身 / 钛金属黑"
+      oninput="buildPrompt()"></textarea>
+  </div>
+
+  <div class="section">
+    <div class="slabel">出图风格</div>
+    <div class="chip-row" id="styleChips">
+      <div class="chip on" data-v="photo">产品摄影</div>
+      <div class="chip" data-v="render">3D渲染</div>
+      <div class="chip" data-v="flat">平铺俯视</div>
+      <div class="chip" data-v="life">生活场景</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="slabel">即梦提示词</div>
+    <div class="prompt-box">
+      <div class="prompt-head">
+        <span id="promptSummary">—</span>
+        <div style="display:flex;gap:3px">
+          <button class="lang-btn on" onclick="setLang('cn')">中文</button>
+          <button class="lang-btn" onclick="setLang('en')">English</button>
+        </div>
+      </div>
+      <div class="prompt-body" id="promptBody"></div>
+      <div class="prompt-foot">
+        <button class="btn" onclick="copyPrompt()">复制提示词</button>
+        <button class="btn primary" onclick="goTab(1)">去上传效果图 →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="slabel">即梦参数设置</div>
+    <div class="card"><div class="card-body">
+      <div class="setting-row"><span class="sk">上传图片</span><span class="sv">手板俯视图，建议裁去格子背景</span></div>
+      <div class="setting-row"><span class="sk">参考度</span><span class="sv" id="refTip">65~72（PC+ABS 推荐）</span></div>
+      <div class="setting-row"><span class="sk">模型</span><span class="sv">即梦通用 3.0 / 4.0，精细度 50+</span></div>
+      <div class="setting-row"><span class="sk">数量</span><span class="sv">每个配色出 4 张，取最佳 1 张上传到②</span></div>
+      <div class="setting-row"><span class="sk">效果不佳</span><span class="sv">颜色不准 → 参考度 -5 ｜ 结构变形 → 参考度 +5</span></div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ══ TAB 2 ══ -->
+<div class="page" id="page1">
+  <div class="section">
+    <div class="upload-zone">
+      <input type="file" id="fileInput" accept="image/*" multiple>
+      <div class="upload-icon">＋</div>
+      <div class="upload-label">上传即梦效果图</div>
+      <div class="upload-sub">支持多选，最多 8 张 · 自动同步到云端，团队实时可见</div>
+      <div class="upload-progress" id="uploadProgress">
+        <div class="upload-progress-fill" id="uploadFill"></div>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+      <div class="slabel" style="margin:0">效果图 (<span id="imgCount">0</span> 张)</div>
+      <div style="display:flex;gap:7px;">
+        <button class="btn sm" onclick="loadImages()"><span class="spin" id="refreshSpin" style="display:none"></span>刷新</button>
+        <button class="btn sm primary" onclick="sendToVote()">发送入围图到投票 →</button>
+      </div>
+    </div>
+    <div class="image-wall" id="imageWall">
+      <div class="loading" style="grid-column:span 4"><span class="spin"></span>加载中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB 3 ══ -->
+<div class="page" id="page2">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:2px;">对入围配色评分</div>
+      <div style="font-size:12px;color:var(--text3)">每人打 1~5 星并留评语，多人同时投票实时同步</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" onclick="loadVotes()">刷新投票</button>
+      <button class="btn primary" onclick="goTab(3)">查看报告 →</button>
+    </div>
+  </div>
+  <div class="vote-wall" id="voteWall">
+    <div class="loading" style="grid-column:span 3"><span class="spin"></span>加载中...</div>
+  </div>
+</div>
+
+<!-- ══ TAB 4 ══ -->
+<div class="page" id="page3">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div style="font-size:13px;font-weight:500">选品决策报告</div>
+    <div style="display:flex;gap:7px;">
+      <button class="btn" onclick="buildReport()">刷新报告</button>
+      <button class="btn primary" onclick="copyReport()">复制报告</button>
+    </div>
+  </div>
+  <div id="reportArea">
+    <div class="empty"><div class="empty-icon">◎</div><div style="font-size:13px;color:var(--text3)">完成投票后点「刷新报告」</div></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// ══════════════════════════════════════════
+// SUPABASE INIT
+// ══════════════════════════════════════════
+// 运行时优先读 localStorage 覆盖（方便不重新部署就能改配置）
+const _url  = localStorage.getItem('sb_url')  || SUPABASE_URL;
+const _key  = localStorage.getItem('sb_key')  || SUPABASE_ANON_KEY;
+const DB    = supabase.createClient(_url, _key);
+const CONFIGURED = _url !== 'https://YOUR_PROJECT.supabase.co';
+
+if(!CONFIGURED){
+  document.body.insertAdjacentHTML('afterbegin',
+    `<div class="cfg-banner">⚠️ Supabase 未配置，数据无法同步。
+     <button class="btn sm" style="margin-left:auto" onclick="openCfg()">立即配置</button></div>`);
+}
+
+function openCfg(){
+  document.getElementById('cfgUrl').value = _url !== 'https://YOUR_PROJECT.supabase.co' ? _url : '';
+  document.getElementById('cfgKey').value = '';
+  document.getElementById('cfgModal').style.display='flex';
+}
+function closeCfg(){ document.getElementById('cfgModal').style.display='none'; }
+function saveCfg(){
+  const u=document.getElementById('cfgUrl').value.trim();
+  const k=document.getElementById('cfgKey').value.trim();
+  if(!u||!k){ toast('请填写完整'); return; }
+  localStorage.setItem('sb_url',u); localStorage.setItem('sb_key',k);
+  location.reload();
+}
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let S = {
+  user:'', lang:'cn',
+  mat:'pcabs', color:'', colorHex:'#D4B07A',
+  finish:'matte', inner:'silver', scene:'body',
+  style:'photo',
+  images:[],   // [{id,name,public_url,status,uploader}]
+  votes:{},    // {imageId:[{id,voter,stars,comment}]}
+  myStars:{},  // {imageId: stars} temp before save
+};
+
+// ══════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════
+function doLogin(){
+  const n = document.getElementById('nameInput').value.trim();
+  if(!n){ document.getElementById('nameInput').style.borderColor='var(--red)'; return; }
+  S.user=n; localStorage.setItem('agent_user',n);
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('uname').textContent=n;
+  if(CONFIGURED) loadImages();
+}
+function changeUser(){
+  const n=prompt('修改姓名：',S.user);
+  if(n&&n.trim()){ S.user=n.trim(); localStorage.setItem('agent_user',S.user); document.getElementById('uname').textContent=S.user; }
+}
+
+// ══════════════════════════════════════════
+// PROMPT BUILDER
+// ══════════════════════════════════════════
+const SWATCHES_DATA=[
+  {n:'香槟金',h:'#D4B07A'},{n:'玫瑰金',h:'#C8847A'},{n:'丁香紫',h:'#9E8EC0'},
+  {n:'抹茶绿',h:'#8FAF7A'},{n:'冰雾蓝',h:'#8AB0C8'},{n:'奶白',h:'#F0EBE0'},
+  {n:'哑黑',h:'#2A2A2A'},{n:'珊瑚橙',h:'#E07A5A'},{n:'银灰',h:'#A0A09A'},
+  {n:'薄荷绿',h:'#8DC8A8'},{n:'奶油黄',h:'#E8D898'},{n:'烟粉',h:'#E8A8B8'},
+  {n:'深空蓝',h:'#3A5880'},{n:'暗橄榄',h:'#7A8850'},{n:'透明磨砂',h:'#D8D8E8'},
+];
+const MAT_D={
+  pcabs:{label:'PC+ABS 塑壳',tip:'颜色柔和均匀，成本比铝低40~50%，适合多色SKU，批次色差小。',ref:'65~72',en:'PC+ABS plastic outer ring'},
+  alu:  {label:'阳极氧化铝',tip:'金属质感强，耐磨，颜色受限，批次色差需管控，成本较高。',ref:'60~68',en:'anodized aluminum outer ring'},
+  tpu:  {label:'TPU 软胶',tip:'手感软糯，半透明效果独特，成本低，高级感略弱。',ref:'58~65',en:'TPU soft rubber outer ring'},
+  zinc: {label:'锌合金',tip:'重质感最强，压铸电镀极佳，成本最高，适合旗舰款。',ref:'68~75',en:'zinc alloy outer ring'},
+};
+const FINISH_D={
+  matte:{cn:'哑光质感',en:'matte finish'},glossy:{cn:'高光亮面质感',en:'glossy finish'},
+  frosted:{cn:'磨砂质感',en:'frosted finish'},pearl:{cn:'珠光质感',en:'pearlescent finish'},
+  trans:{cn:'半透明磨砂质感',en:'frosted translucent finish'},
+};
+const INNER_D={
+  silver:{cn:'银色金属内圈',en:'silver metal inner ring'},black:{cn:'哑黑内圈',en:'matte black inner ring'},
+  match:{cn:'内外圈同色',en:'inner ring same color as outer'},gold:{cn:'香槟金内圈',en:'champagne gold inner ring'},
+};
+const STYLE_D={
+  photo:{cn:'专业产品摄影棚拍，柔和工作室灯光',en:'professional product studio photography, soft studio lighting, pure white background'},
+  render:{cn:'3D产品渲染，真实材质质感，工业设计展示风格',en:'3D product render, realistic material, industrial design presentation'},
+  flat:{cn:'平铺俯视，纯白背景，电商主图风格',en:'flat lay overhead, white background, e-commerce hero image'},
+  life:{cn:'生活场景，手持手机，自然光，真实使用感',en:'lifestyle photo, hand holding phone, natural light'},
+};
+
+function buildSwatches(){
+  const g=document.getElementById('swatches'); g.innerHTML='';
+  SWATCHES_DATA.forEach(sw=>{
+    const d=document.createElement('div'); d.className='sw-item';
+    d.innerHTML=`<div class="sw${S.color===sw.n?' on':''}" style="background:${sw.h}" title="${sw.n}" onclick="pickSwatch('${sw.n}','${sw.h}')"></div><div class="sw-label">${sw.n}</div>`;
+    g.appendChild(d);
+  });
+}
+function pickSwatch(n,h){ S.color=n; S.colorHex=h; document.getElementById('colorInput').value=n; document.getElementById('colorDot').style.background=h; buildSwatches(); buildPrompt(); }
+function onColorInput(v){ S.color=v; const m=SWATCHES_DATA.find(s=>s.n===v); if(m){S.colorHex=m.h;document.getElementById('colorDot').style.background=m.h;} buildSwatches(); buildPrompt(); }
+
+function pickScene(el){ document.querySelectorAll('.scene-card').forEach(c=>c.classList.remove('on')); el.classList.add('on'); S.scene=el.dataset.s;
+  const ph={body:'描述手机机身颜色，例如：香槟金 iPhone / 深紫色机身 / 钛金属黑',case:'描述手机壳，例如：浅粉透明壳 / 抹茶绿磨砂壳 / 丁香紫硬壳',white:'纯白底无需描述，或补充打光风格，例如：柔和侧光'};
+  document.getElementById('sceneNote').placeholder=ph[S.scene]; buildPrompt();
+}
+
+function getBgCN(){ const d=document.getElementById('sceneNote').value; if(S.scene==='body') return `贴合在${d||'手机背面'}，手机占画面2/3`; if(S.scene==='case') return `贴合在${d||'手机壳背面'}，搭配展示`; return `纯白背景，产品独立展示${d?'，'+d:''}`; }
+function getBgEN(){ const d=document.getElementById('sceneNote').value; if(S.scene==='body') return `attached on ${d||'phone back'}, phone takes 2/3 of frame`; if(S.scene==='case') return `attached on ${d||'phone case'}`; return `pure white background, standalone product${d?', '+d:''}`; }
+
+function buildPrompt(){
+  const color=S.color||'自定义颜色';
+  const txt = S.lang==='cn'
+    ? `双环磁吸手机指环支架，${STYLE_D[S.style].cn}，${MAT_D[S.mat].label}，${color}颜色，${FINISH_D[S.finish].cn}，${INNER_D[S.inner].cn}，${getBgCN()}，8K细节，无任何文字水印`
+    : `dual ring magnetic phone holder ring stand, ${STYLE_D[S.style].en}, ${MAT_D[S.mat].en}, ${color} color, ${FINISH_D[S.finish].en}, ${INNER_D[S.inner].en}, ${getBgEN()}, 8K detail, no text no watermark`;
+  document.getElementById('promptBody').textContent=txt;
+  document.getElementById('promptSummary').textContent=`${MAT_D[S.mat].label} · ${FINISH_D[S.finish].cn} · ${S.color||'—'} · ${INNER_D[S.inner].cn}`;
+  document.getElementById('matTip').textContent=MAT_D[S.mat].tip;
+  document.getElementById('refTip').textContent=`${MAT_D[S.mat].ref}（${MAT_D[S.mat].label}推荐）`;
+}
+function setLang(l){ S.lang=l; document.querySelectorAll('.lang-btn').forEach((b,i)=>b.classList.toggle('on',i===(l==='cn'?0:1))); buildPrompt(); }
+function copyPrompt(){ navigator.clipboard.writeText(document.getElementById('promptBody').textContent).catch(()=>{}); const b=event.target,o=b.textContent; b.textContent='已复制 ✓'; setTimeout(()=>b.textContent=o,1500); }
+function setupChips(id,key){ document.getElementById(id).addEventListener('click',e=>{ const c=e.target.closest('.chip'); if(!c)return; document.querySelectorAll('#'+id+' .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); S[key]=c.dataset.v; buildPrompt(); }); }
+
+// ══════════════════════════════════════════
+// IMAGE WALL — Supabase Storage
+// ══════════════════════════════════════════
+document.getElementById('fileInput').addEventListener('change', async e=>{
+  if(!CONFIGURED){toast('请先配置 Supabase');openCfg();return;}
+  const files=Array.from(e.target.files);
+  const existing=S.images.length;
+  if(existing+files.length>8){toast('最多 8 张');return;}
+
+  const prog=document.getElementById('uploadProgress');
+  const fill=document.getElementById('uploadFill');
+  prog.style.display='block'; fill.style.width='0%';
+
+  for(let i=0;i<files.length;i++){
+    const f=files[i];
+    fill.style.width=Math.round((i/files.length)*80)+'%';
+    toast(`上传中 ${i+1}/${files.length}：${f.name}`);
+    try{
+      // Upload to Storage
+      const ext=f.name.split('.').pop();
+      const path=`images/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const {error:upErr}=await DB.storage.from('product-images').upload(path,f,{contentType:f.type});
+      if(upErr) throw upErr;
+
+      // Get public URL
+      const {data:urlData}=DB.storage.from('product-images').getPublicUrl(path);
+      const publicUrl=urlData.publicUrl;
+
+      // Save record to DB
+      const {data:rec,error:dbErr}=await DB.from('images').insert({
+        name:f.name.replace(/\.[^.]+$/,''),
+        storage_path:path,
+        public_url:publicUrl,
+        status:'pending',
+        uploader:S.user,
+      }).select().single();
+      if(dbErr) throw dbErr;
+
+      S.images.push({id:rec.id,name:rec.name,public_url:rec.public_url,status:'pending',uploader:S.user});
+    }catch(err){ toast('上传失败：'+(err.message||err)); }
+  }
+  fill.style.width='100%';
+  setTimeout(()=>{prog.style.display='none';fill.style.width='0%';},600);
+  e.target.value='';
+  renderImageWall();
+  toast('上传完成');
+});
+
+async function loadImages(){
+  if(!CONFIGURED) return;
+  document.getElementById('refreshSpin').style.display='inline-block';
+  const {data,error}=await DB.from('images').select('*').order('created_at',{ascending:true});
+  document.getElementById('refreshSpin').style.display='none';
+  if(error){toast('加载失败：'+error.message);return;}
+  S.images=data.map(r=>({id:r.id,name:r.name,public_url:r.public_url,status:r.status,uploader:r.uploader}));
+  renderImageWall();
+}
+
+function renderImageWall(){
+  const wall=document.getElementById('imageWall');
+  const n=S.images.length;
+  document.getElementById('imgCount').textContent=n;
+  const badge=document.getElementById('imgBadge');
+  badge.textContent=n; badge.style.display=n>0?'inline-flex':'none';
+  if(!n){wall.innerHTML=`<div class="empty" style="grid-column:span 4"><div class="empty-icon">◎</div><div style="font-size:13px;color:var(--text3)">上传即梦生成的效果图开始选品</div></div>`;return;}
+  wall.innerHTML='';
+  S.images.forEach((img,idx)=>{
+    const d=document.createElement('div');
+    d.className='img-card'+(img.status==='shortlisted'?' shortlisted':img.status==='eliminated'?' eliminated':img.status==='pending'?' pending':'');
+    d.innerHTML=`<img class="img-thumb" src="${img.public_url}" loading="lazy">
+      <div class="img-info">
+        <div class="img-name">${img.name}</div>
+        <div class="img-by">↑ ${img.uploader}</div>
+        <div class="status-row">
+          <button class="sbtn s${img.status==='shortlisted'?' active':''}" onclick="setStatus(${idx},'shortlisted')">入围</button>
+          <button class="sbtn p${img.status==='pending'?' active':''}" onclick="setStatus(${idx},'pending')">待定</button>
+          <button class="sbtn e${img.status==='eliminated'?' active':''}" onclick="setStatus(${idx},'eliminated')">淘汰</button>
+        </div>
+      </div>`;
+    wall.appendChild(d);
+  });
+}
+
+async function setStatus(idx,st){
+  S.images[idx].status=st; renderImageWall();
+  const {error}=await DB.from('images').update({status:st}).eq('id',S.images[idx].id);
+  if(error) toast('同步失败：'+error.message);
+}
+
+function sendToVote(){
+  if(!S.images.some(i=>i.status==='shortlisted')){toast('请先标记至少一张图为「入围」');return;}
+  goTab(2);
+}
+
+// ══════════════════════════════════════════
+// VOTE WALL
+// ══════════════════════════════════════════
+async function loadVotes(){
+  if(!CONFIGURED) return;
+  const {data,error}=await DB.from('votes').select('*');
+  if(error){toast('加载投票失败：'+error.message);return;}
+  S.votes={};
+  data.forEach(r=>{ if(!S.votes[r.image_id]) S.votes[r.image_id]=[]; S.votes[r.image_id].push({id:r.id,voter:r.voter,stars:r.stars,comment:r.comment}); });
+  renderVoteWall();
+}
+
+function renderVoteWall(){
+  const sl=S.images.filter(i=>i.status==='shortlisted');
+  const wall=document.getElementById('voteWall');
+  if(!sl.length){wall.innerHTML=`<div class="empty" style="grid-column:span 3"><div class="empty-icon">◎</div><div style="font-size:13px;color:var(--text3)">请先在②标记入围图，然后点「发送入围图到投票」</div></div>`;return;}
+  wall.innerHTML='';
+  sl.forEach(img=>{
+    const votes=S.votes[img.id]||[];
+    const mine=votes.find(v=>v.voter===S.user)||{stars:0,comment:''};
+    const tempStars=S.myStars[img.id]??mine.stars;
+    const avg=votes.length?Math.round(votes.reduce((s,v)=>s+v.stars,0)/votes.length*10)/10:0;
+    const d=document.createElement('div'); d.className='vote-card';
+    d.innerHTML=`<img class="vote-img" src="${img.public_url}" loading="lazy">
+      <div class="vote-body">
+        <div class="vote-name">${img.name}</div>
+        <div class="stars" id="s_${img.id}">
+          ${[1,2,3,4,5].map(n=>`<span class="star${tempStars>=n?' on':''}" onclick="pickStar('${img.id}',${n})">★</span>`).join('')}
+        </div>
+        <textarea class="vote-input" id="c_${img.id}" placeholder="评语（可选）">${mine.comment}</textarea>
+        <button class="vote-save${mine.stars?' saved':''}" id="vsave_${img.id}" onclick="saveVote('${img.id}')">
+          ${mine.stars?'已投票 · 点击更新':'保存我的评分'}
+        </button>
+        <div class="vote-bar"><div class="vote-fill" style="width:${avg/5*100}%"></div></div>
+        <div class="vote-meta">
+          <span>${votes.length} 人投票 · 均分 ${avg||'—'}</span>
+          ${mine.stars?`<span class="my-badge">我：${mine.stars}★</span>`:''}
+        </div>
+        ${votes.length?`<div class="vote-list">${votes.map(v=>`${v.voter} ${v.stars}★${v.comment?' · '+v.comment:''}`).join(' ｜ ')}</div>`:''}
+      </div>`;
+    wall.appendChild(d);
+  });
+}
+
+function pickStar(imgId,n){
+  S.myStars[imgId]=n;
+  document.querySelectorAll(`#s_${imgId} .star`).forEach((s,i)=>s.classList.toggle('on',i<n));
+}
+
+async function saveVote(imgId){
+  if(!CONFIGURED){toast('请先配置 Supabase');return;}
+  const stars=S.myStars[imgId]||(S.votes[imgId]?.find(v=>v.voter===S.user)?.stars)||0;
+  const comment=document.getElementById('c_'+imgId)?.value||'';
+  if(!stars){toast('请先打星再保存');return;}
+  const btn=document.getElementById('vsave_'+imgId);
+  btn.textContent='保存中...'; btn.disabled=true;
+  try{
+    const {data,error}=await DB.from('votes').upsert(
+      {image_id:imgId, voter:S.user, stars, comment, updated_at:new Date().toISOString()},
+      {onConflict:'image_id,voter'}
+    ).select().single();
+    if(error) throw error;
+    // Update local
+    if(!S.votes[imgId]) S.votes[imgId]=[];
+    const idx=S.votes[imgId].findIndex(v=>v.voter===S.user);
+    if(idx>=0) S.votes[imgId][idx]={...S.votes[imgId][idx],stars,comment};
+    else S.votes[imgId].push({id:data.id,voter:S.user,stars,comment});
+    renderVoteWall();
+    toast('投票已保存');
+  }catch(e){ toast('保存失败：'+(e.message||e)); btn.textContent='保存我的评分'; btn.disabled=false; }
+}
+
+// ══════════════════════════════════════════
+// REPORT
+// ══════════════════════════════════════════
+function buildReport(){
+  const sl=S.images.filter(i=>i.status==='shortlisted');
+  const area=document.getElementById('reportArea');
+  if(!sl.length){area.innerHTML=`<div class="empty"><div class="empty-icon">◎</div><div style="font-size:13px;color:var(--text3)">请先标记入围图并完成投票</div></div>`;return;}
+
+  const ranked=sl.map(img=>{
+    const vs=S.votes[img.id]||[];
+    const avg=vs.length?Math.round(vs.reduce((s,v)=>s+v.stars,0)/vs.length*10)/10:0;
+    return{...img,avg,vs,comments:vs.filter(v=>v.comment).map(v=>`${v.voter}：${v.comment}`).join(' / ')};
+  }).sort((a,b)=>b.avg-a.avg);
+
+  const w=ranked[0];
+  const now=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
+  const color=S.color||'待确认';
+  const voters=[...new Set(Object.values(S.votes).flat().map(v=>v.voter))];
+
+  const rankRows=ranked.map((r,i)=>`
+    <div class="rpt-row">
+      <span class="rpt-k">${i+1}. ${r.name}</span>
+      <span class="rpt-v">${r.avg}/5（${r.vs.length}票）${r.comments?' · '+r.comments:''}</span>
+    </div>`).join('');
+
+  const reportText=`配色选品报告 · ${now}
+${'─'.repeat(42)}
+
+【投票排名】
+${ranked.map((r,i)=>`  ${i+1}. ${r.name}  ${r.avg}/5  ${r.vs.length}票${r.comments?'\n     '+r.comments:''}`).join('\n')}
+
+【最终选色】${w.name}
+【参与投票】${voters.join('、')}（共 ${voters.length} 人）
+
+【产品工艺参数】
+  外圈材质：${MAT_D[S.mat].label}
+  外圈颜色：${color}
+  表面工艺：${FINISH_D[S.finish].cn}
+  内圈颜色：${INNER_D[S.inner].cn}
+
+${'─'.repeat(42)}
+供应商传达文本（可直接复制发送）
+${'─'.repeat(42)}
+
+双环磁吸手机指环支架 — 配色打样需求
+
+外圈材质：${MAT_D[S.mat].label}
+颜色方向：${color}
+表面工艺：${FINISH_D[S.finish].cn}
+内圈颜色：${INNER_D[S.inner].cn}
+
+打样要求：
+· 请提供 RAL / Pantone 色卡确认，双方确认后方可投产
+· 批次色差控制 ΔE ≤ 1.5
+· 打样数量：3~5 pcs，实物确色后批量生产
+· 结构约束：双环同心圆，内外圈分离，连接件位置不变
+· 参考效果图：见附件（即梦生成图）
+
+${'─'.repeat(42)}
+由配色选品 Agent 生成 · ${now}`;
+
+  area.innerHTML=`
+    <div class="rpt-header">
+      <div class="rpt-title">选品决策报告</div>
+      <div class="rpt-sub">${now} · ${sl.length} 个配色 · ${voters.length} 人参与投票</div>
+    </div>
+    <div class="rpt-grid">
+      <div class="rpt-card">
+        <div class="rpt-card-title">投票排名</div>${rankRows}
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-title">最终选色</div>
+        <div class="winner-tag">★ ${w.name}</div>
+        <div class="rpt-row"><span class="rpt-k">材质</span><span class="rpt-v">${MAT_D[S.mat].label}</span></div>
+        <div class="rpt-row"><span class="rpt-k">颜色</span><span class="rpt-v">${color}</span></div>
+        <div class="rpt-row"><span class="rpt-k">工艺</span><span class="rpt-v">${FINISH_D[S.finish].cn}</span></div>
+        <div class="rpt-row"><span class="rpt-k">内圈</span><span class="rpt-v">${INNER_D[S.inner].cn}</span></div>
+        <div class="rpt-row"><span class="rpt-k">均分</span><span class="rpt-v">${w.avg} / 5</span></div>
+        <div class="rpt-row"><span class="rpt-k">参与者</span><span class="rpt-v">${voters.join('、')}</span></div>
+      </div>
+    </div>
+    <div class="slabel">供应商传达文本</div>
+    <div class="copy-area">${reportText}</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" onclick="copyReport()">复制完整报告</button>
+      <button class="btn" onclick="goTab(2)">← 返回投票</button>
+    </div>`;
+  window._reportText=reportText;
+}
+
+function copyReport(){
+  navigator.clipboard.writeText(window._reportText||'').catch(()=>{});
+  const b=event.target,o=b.textContent; b.textContent='已复制 ✓'; setTimeout(()=>b.textContent=o,1500);
+}
+
+// ══════════════════════════════════════════
+// TAB ROUTING
+// ══════════════════════════════════════════
+function goTab(i){
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',i===j));
+  document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('active',i===j));
+  if(i===1) loadImages();
+  if(i===2){ loadImages(); setTimeout(loadVotes,200); }
+  if(i===3){ Promise.all([loadImages(),loadVotes()]).then(buildReport); }
+}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+let _t; function toast(m){ const el=document.getElementById('toast'); el.textContent=m; el.classList.add('show'); clearTimeout(_t); _t=setTimeout(()=>el.classList.remove('show'),2500); }
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+buildSwatches();
+setupChips('matChips','mat');
+setupChips('finishChips','finish');
+setupChips('innerChips','inner');
+setupChips('styleChips','style');
+document.getElementById('sceneNote').addEventListener('input',buildPrompt);
+buildPrompt();
+
+const savedUser=localStorage.getItem('agent_user');
+if(savedUser){ S.user=savedUser; document.getElementById('loginOverlay').style.display='none'; document.getElementById('uname').textContent=savedUser; if(CONFIGURED) loadImages(); }
+</script>
+
+<!-- ══ TAB 批量生图 ══ -->
+<div class="page" id="page4">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:15px;font-weight:500;margin-bottom:4px;">批量生图</div>
+      <div style="font-size:12px;color:var(--text3);line-height:1.7">基于当前提示词配置，一次生成多个配色方向的效果图<br>生成完成后可直接发送到效果图管理进行选品</div>
+    </div>
+    <button class="btn sm" onclick="goTab(0)" style="flex-shrink:0">← 修改提示词配置</button>
+  </div>
+  <div class="section">
+    <div class="slabel">配色方向（最多 4 个）</div>
+    <div id="batchColorList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
+    <button class="btn sm" onclick="addBatchColor()" style="width:100%;border-style:dashed;">+ 添加配色</button>
+  </div>
+  <div class="two-col" style="margin-bottom:20px;">
+    <div class="section">
+      <div class="slabel">出图尺寸</div>
+      <div class="chip-row" id="sizeChips">
+        <div class="chip on" data-v="1024x1024">1:1 方图</div>
+        <div class="chip" data-v="768x1024">3:4 竖图</div>
+        <div class="chip" data-v="1024x768">4:3 横图</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="slabel">模型版本</div>
+      <div class="chip-row" id="modelChips">
+        <div class="chip on" data-v="jimeng_t2i_v3">文生图 3.0</div>
+        <div class="chip" data-v="jimeng_t2i_v3_1">文生图 3.1</div>
+      </div>
+    </div>
+  </div>
+  <button class="btn primary" id="batchGenBtn" onclick="startBatchGen()" style="width:100%;padding:12px;font-size:14px;margin-bottom:16px;">开始批量生图</button>
+  <div id="batchProgress" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span style="font-size:12px;font-weight:500;color:var(--text2);" id="batchStatusText">生成中...</span>
+    </div>
+    <div style="background:var(--border);border-radius:3px;height:4px;overflow:hidden;margin-bottom:16px;">
+      <div id="batchProgressFill" style="height:4px;background:var(--text);border-radius:3px;width:0%;transition:width .4s;"></div>
+    </div>
+    <div class="image-wall" id="batchResultWall"></div>
+  </div>
+  <div id="batchDoneBar" style="display:none;margin-top:16px;padding:14px 16px;background:var(--green-light);border-radius:var(--radius);align-items:center;justify-content:space-between;">
+    <span style="font-size:13px;color:var(--green);font-weight:500;" id="batchDoneText">生成完成</span>
+    <button class="btn sm primary" onclick="sendBatchToWall()">发送到效果图管理 →</button>
+  </div>
+</div>
+
+<script>
+// ══ BATCH GENERATE ══
+let batchColors=[{color:'香槟金'},{color:'丁香紫'},{color:'玫瑰金'},{color:'抹茶绿'}];
+let batchSize='1024x1024', batchModel='jimeng_t2i_v3', batchResults=[];
+
+function renderBatchColorList(){
+  const list=document.getElementById('batchColorList'); if(!list)return;
+  list.innerHTML='';
+  batchColors.forEach((item,idx)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);';
+    row.innerHTML=`<span style="font-size:12px;color:var(--text3);min-width:16px;">${idx+1}</span>
+      <input value="${item.color}" placeholder="颜色名称，例如：香槟金"
+        style="flex:1;border:none;background:transparent;font-size:13px;outline:none;color:var(--text);"
+        oninput="batchColors[${idx}].color=this.value">
+      <span style="font-size:10px;color:var(--text3);white-space:nowrap;">替换提示词颜色</span>
+      <button onclick="batchColors.splice(${idx},1);renderBatchColorList()" style="width:18px;height:18px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:10px;color:var(--text3);">✕</button>`;
+    list.appendChild(row);
+  });
+}
+
+function addBatchColor(){
+  if(batchColors.length>=4){toast('最多 4 个');return;}
+  batchColors.push({color:''});renderBatchColorList();
+}
+
+document.getElementById('sizeChips').addEventListener('click',e=>{
+  const c=e.target.closest('.chip');if(!c)return;
+  document.querySelectorAll('#sizeChips .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on');batchSize=c.dataset.v;
+});
+document.getElementById('modelChips').addEventListener('click',e=>{
+  const c=e.target.closest('.chip');if(!c)return;
+  document.querySelectorAll('#modelChips .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on');batchModel=c.dataset.v;
+});
+
+async function startBatchGen(){
+  const colors=batchColors.filter(c=>c.color.trim());
+  if(!colors.length){toast('请填写配色方向');return;}
+  const basePrompt=document.getElementById('promptBody')?.textContent||'';
+  if(!basePrompt.includes('支架')){toast('请先在①配置好提示词');return;}
+
+  document.getElementById('batchGenBtn').disabled=true;
+  document.getElementById('batchGenBtn').textContent='生成中...';
+  document.getElementById('batchProgress').style.display='block';
+  document.getElementById('batchDoneBar').style.display='none';
+  document.getElementById('batchResultWall').innerHTML='';
+  batchResults=[];
+
+  const [w,h]=batchSize.split('x').map(Number);
+
+  for(let i=0;i<colors.length;i++){
+    const colorName=colors[i].color.trim();
+    const prompt=basePrompt.replace(/[一-龥a-zA-Z0-9 ]+(?=颜色)/,colorName);
+    document.getElementById('batchStatusText').textContent=`生成 ${i+1}/${colors.length}：${colorName}...`;
+    document.getElementById('batchProgressFill').style.width=`${Math.round(i/colors.length*100)}%`;
+
+    const wall=document.getElementById('batchResultWall');
+    const card=document.createElement('div');
+    card.id=`bc_${i}`;
+    card.style.cssText='border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface);';
+    card.innerHTML=`<div style="aspect-ratio:1;background:var(--surface2);display:flex;align-items:center;justify-content:center;"><span class="spin"></span></div><div style="padding:8px 10px;font-size:12px;font-weight:500;">${colorName}</div>`;
+    wall.appendChild(card);
+
+    try{
+      const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,req_key:batchModel,width:w,height:h,seed:-1})});
+      const data=await res.json();
+      if(data.success&&data.urls?.length){
+        const url=data.urls[0];
+        batchResults.push({color:colorName,url,prompt});
+        card.innerHTML=`<img src="${url}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;"><div style="padding:8px 10px;"><div style="font-size:12px;font-weight:500;">${colorName}</div><div style="font-size:10px;color:var(--text3);">生成成功</div></div>`;
+      }else{
+        card.innerHTML=`<div style="aspect-ratio:1;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--red);">失败</div><div style="padding:8px 10px;font-size:12px;">${colorName}<br><span style="font-size:10px;color:var(--red);">${data.error||'未知错误'}</span></div>`;
+      }
+    }catch(err){
+      card.innerHTML=`<div style="aspect-ratio:1;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--red);">网络错误</div><div style="padding:8px 10px;font-size:12px;">${colorName}</div>`;
+    }
+  }
+
+  document.getElementById('batchProgressFill').style.width='100%';
+  document.getElementById('batchStatusText').textContent=`完成：${batchResults.length}/${colors.length} 张成功`;
+  document.getElementById('batchGenBtn').disabled=false;
+  document.getElementById('batchGenBtn').textContent='重新生成';
+  if(batchResults.length>0){
+    const bar=document.getElementById('batchDoneBar');
+    bar.style.display='flex';
+    document.getElementById('batchDoneText').textContent=`${batchResults.length} 张图已生成`;
+  }
+}
+
+async function sendBatchToWall(){
+  if(!CONFIGURED){toast('请先配置 Supabase');return;}
+  if(!batchResults.length){toast('没有可发送的图片');return;}
+  toast('上传到云端...');
+  let ok=0;
+  for(const item of batchResults){
+    try{
+      const imgResp=await fetch(item.url);
+      const blob=await imgResp.blob();
+      const path=`images/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+      const{error:upErr}=await DB.storage.from('product-images').upload(path,blob,{contentType:'image/jpeg'});
+      if(upErr)throw upErr;
+      const{data:urlData}=DB.storage.from('product-images').getPublicUrl(path);
+      const{data:rec,error:dbErr}=await DB.from('images').insert({name:item.color,storage_path:path,public_url:urlData.publicUrl,status:'pending',uploader:S.user+'（批量生图）'}).select().single();
+      if(dbErr)throw dbErr;
+      S.images.push({id:rec.id,name:rec.name,public_url:rec.public_url,status:'pending',uploader:rec.uploader});
+      ok++;
+    }catch(err){toast('上传失败：'+err.message);}
+  }
+  toast(`${ok} 张已发送`);
+  goTab(1);
+}
+
+// ══ 更新 goTab 支持 tab4 ══
+const _gt=goTab;
+goTab=function(i){
+  const pages=document.querySelectorAll('.page');
+  const tabs=document.querySelectorAll('.tab');
+  pages.forEach((p,j)=>p.classList.toggle('active',j===i));
+  // tab order: 0,4,1,2,3
+  const tabMap=[0,4,1,2,3];
+  tabs.forEach((t,j)=>t.classList.toggle('active',tabMap[j]===i));
+  if(i===1)loadImages();
+  if(i===2){loadImages();setTimeout(loadVotes,200);}
+  if(i===3){Promise.all([loadImages(),loadVotes()]).then(buildReport);}
+  if(i===4)renderBatchColorList();
+};
+// Rebind tab clicks
+document.querySelectorAll('.tab').forEach((tab,j)=>{
+  const tabMap=[0,4,1,2,3];
+  tab.onclick=()=>goTab(tabMap[j]);
+});
+</script>
+
+</body>
+</html>
