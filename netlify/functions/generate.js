@@ -43,16 +43,6 @@ async function callVolc(AK, SK, action, bodyObj) {
   return resp.json();
 }
 
-async function pollResult(AK, SK, taskId) {
-  for (let i = 0; i < 15; i++) {
-    await new Promise(r => setTimeout(r, 1500));
-    const qdata = await callVolc(AK, SK, 'CVSync2AsyncGetResult', { task_id: taskId });
-    if (qdata.data?.status === 'done') return { ok: true, urls: qdata.data?.image_urls || [] };
-    if (qdata.data?.status === 'failed') return { ok: false, error: '生图任务失败' };
-  }
-  return { ok: false, error: '生图超时，请重试' };
-}
-
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -70,10 +60,21 @@ exports.handler = async (event) => {
   try { reqBody = JSON.parse(event.body); }
   catch { return { statusCode: 400, headers, body: JSON.stringify({ error: '请求格式错误' }) }; }
 
-  const { prompt, width = 1024, height = 1024, seed = -1, ref_image_base64 } = reqBody;
-  if (!prompt) return { statusCode: 400, headers, body: JSON.stringify({ error: '缺少 prompt' }) };
+  const { action, prompt, width = 1024, height = 1024, seed = -1, ref_image_base64, task_id } = reqBody;
 
   try {
+    // ── 查询任务结果 ──
+    if (action === 'query') {
+      if (!task_id) return { statusCode: 400, headers, body: JSON.stringify({ error: '缺少 task_id' }) };
+      const qdata = await callVolc(AK, SK, 'CVSync2AsyncGetResult', { task_id });
+      const status = qdata.data?.status || 'unknown';
+      const urls = qdata.data?.image_urls || [];
+      return { statusCode: 200, headers, body: JSON.stringify({ status, urls, raw: qdata.data }) };
+    }
+
+    // ── 提交生图任务 ──
+    if (!prompt) return { statusCode: 400, headers, body: JSON.stringify({ error: '缺少 prompt' }) };
+
     let data;
     if (ref_image_base64) {
       const base64 = ref_image_base64.replace(/^data:image\/[a-z+]+;base64,/, '');
@@ -101,15 +102,11 @@ exports.handler = async (event) => {
     }
 
     if (data.code !== 10000) {
-      return { statusCode: 500, headers, body: JSON.stringify({ error: data.message || '提交任务失败', code: data.code }) };
+      return { statusCode: 500, headers, body: JSON.stringify({ error: data.message || '提交失败', code: data.code }) };
     }
-
     const taskId = data.data?.task_id;
     if (!taskId) return { statusCode: 500, headers, body: JSON.stringify({ error: '未获取到 task_id' }) };
-
-    const result = await pollResult(AK, SK, taskId);
-    if (result.ok) return { statusCode: 200, headers, body: JSON.stringify({ success: true, urls: result.urls }) };
-    return { statusCode: 500, headers, body: JSON.stringify({ error: result.error }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ task_id: taskId }) };
 
   } catch (err) {
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
