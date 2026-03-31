@@ -962,7 +962,7 @@ async function startBatchGen(){
     wall.appendChild(card);
 
     try{
-      const submitRes=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,width:w,height:h,seed:-1,ref_image_base64:refB64,model:batchModel})});
+      const submitRes=await fetch('https://color-agent.yuanjinyue555.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,width:w,height:h,seed:-1,ref_image_base64:refB64,model:batchModel})});
       const submitData=await submitRes.json();
 
       if(!submitData.task_id){
@@ -976,7 +976,7 @@ async function startBatchGen(){
       for(let t=0;t<90;t++){
         await new Promise(r=>setTimeout(r,2000));
         try{
-          const qRes=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'query',task_id:submitData.task_id})});
+          const qRes=await fetch('https://color-agent.yuanjinyue555.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'query',task_id:submitData.task_id})});
           const qData=await qRes.json();
           if(qData.status==='done'&&qData.urls&&qData.urls.length){
             done=true;
