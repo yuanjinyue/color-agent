@@ -1044,10 +1044,25 @@ function loadRefImg(input){
   const file=input.files[0]; if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
-    window._refImgBase64=e.target.result;
-    document.getElementById('refImgThumb').src=e.target.result;
-    document.getElementById('refImgPlaceholder').style.display='none';
-    document.getElementById('refImgPreview').style.display='block';
+    // 压缩图片到最大 800px，减小 base64 体积
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=800;
+      let w=img.width, h=img.height;
+      if(w>MAX||h>MAX){
+        if(w>h){ h=Math.round(h*MAX/w); w=MAX; }
+        else{ w=Math.round(w*MAX/h); h=MAX; }
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const compressed=canvas.toDataURL('image/jpeg',0.85);
+      window._refImgBase64=compressed;
+      document.getElementById('refImgThumb').src=compressed;
+      document.getElementById('refImgPlaceholder').style.display='none';
+      document.getElementById('refImgPreview').style.display='block';
+    };
+    img.src=e.target.result;
   };
   reader.readAsDataURL(file);
 }
