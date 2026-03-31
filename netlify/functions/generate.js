@@ -69,7 +69,7 @@ exports.handler = async (event) => {
       const qdata = await callVolc(AK, SK, 'CVSync2AsyncGetResult', { task_id });
       const status = qdata.data?.status || 'unknown';
       const urls = qdata.data?.image_urls || [];
-      return { statusCode: 200, headers, body: JSON.stringify({ status, urls, raw: qdata.data }) };
+      return { statusCode: 200, headers, body: JSON.stringify({ status, urls }) };
     }
 
     // ── 提交生图任务 ──
@@ -77,19 +77,25 @@ exports.handler = async (event) => {
 
     let data;
     if (ref_image_base64) {
+      // 去掉 data:image/xxx;base64, 前缀，只保留纯 base64
       const base64 = ref_image_base64.replace(/^data:image\/[a-z+]+;base64,/, '');
+      
+      // 图生图：使用正确的 req_key 和参数格式
       data = await callVolc(AK, SK, 'CVSync2AsyncSubmitTask', {
         req_key: 'jimeng_i2i_v3',
         prompt,
         binary_data_base64: [base64],
-        strength: 0.65,
-        seed,
+        strength: 0.7,
+        seed: seed,
+        scale: 3.5,
         width,
         height,
+        use_pre_enhance: false,
         return_url: true,
         logo_info: { add_logo: false },
       });
     } else {
+      // 文生图
       data = await callVolc(AK, SK, 'CVSync2AsyncSubmitTask', {
         req_key: 'jimeng_t2i_v30',
         prompt,
@@ -102,8 +108,13 @@ exports.handler = async (event) => {
     }
 
     if (data.code !== 10000) {
-      return { statusCode: 500, headers, body: JSON.stringify({ error: data.message || '提交失败', code: data.code }) };
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: data.message || '提交失败', code: data.code, detail: data })
+      };
     }
+
     const taskId = data.data?.task_id;
     if (!taskId) return { statusCode: 500, headers, body: JSON.stringify({ error: '未获取到 task_id' }) };
     return { statusCode: 200, headers, body: JSON.stringify({ task_id: taskId }) };
