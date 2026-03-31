@@ -82,7 +82,7 @@ exports.handler = async (event) => {
       
       // 图生图：使用正确的 req_key 和参数格式
       data = await callVolc(AK, SK, 'CVSync2AsyncSubmitTask', {
-        req_key: 'jimeng_i2i_v3',
+        req_key: 'jimeng_img2img_v3',
         prompt,
         binary_data_base64: [base64],
         strength: 0.7,
