@@ -80,7 +80,7 @@ exports.handler = async (event) => {
       // 图生图：使用图片4.0接口，支持参考图编辑
       const base64 = ref_image_base64.replace(/^data:image\/[a-z+]+;base64,/, '');
       data = await callVolc(AK, SK, 'CVSync2AsyncSubmitTask', {
-        req_key: 'jimeng_picture_4_0',
+        req_key: 'jimeng_i2i_v30',
         prompt,
         binary_data_base64: [base64],
         seed,
