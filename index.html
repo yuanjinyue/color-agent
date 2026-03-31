@@ -933,7 +933,7 @@ async function startBatchGen(){
   const colors=batchColors.filter(c=>c.color.trim());
   if(!colors.length){toast('请填写配色方向');return;}
   const basePrompt=document.getElementById('promptBody')?.textContent||'';
-  if(!basePrompt||basePrompt.length<10){toast('请先在①配置好提示词，选择材质颜色场景');return;}
+  if(!basePrompt||basePrompt.length<10){toast('请先在①配置好提示词');return;}
 
   document.getElementById('batchGenBtn').disabled=true;
   document.getElementById('batchGenBtn').textContent='生成中...';
@@ -945,73 +945,67 @@ async function startBatchGen(){
   const [w,h]=batchSize.split('x').map(Number);
   const refB64=window._refImgBase64||null;
   const wall=document.getElementById('batchResultWall');
+  const total=colors.length;
 
-  // Step1: 串行提交任务（即梦并发限制为1）
-  const tasks=[];
-  for(let i=0;i<colors.length;i++){
+  for(let i=0;i<total;i++){
     const colorName=colors[i].color.trim();
     const colorMatch=basePrompt.match(/([一-龥a-zA-Z0-9]+)(?=颜色)/);
     const prompt=colorMatch?basePrompt.replace(colorMatch[0],colorName):basePrompt+'，颜色为'+colorName;
+
+    document.getElementById('batchStatusText').textContent='生成 '+(i+1)+'/'+total+'：'+colorName+'...';
+    document.getElementById('batchProgressFill').style.width=Math.round(i/total*100)+'%';
+
     const card=document.createElement('div');
     card.id='bc_'+i;
     card.style.cssText='border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface);';
     card.innerHTML='<div style="aspect-ratio:1;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;"><span class="spin"></span><span style="font-size:11px;color:var(--text3);">提交中...</span></div><div style="padding:8px 10px;font-size:12px;font-weight:500;">'+colorName+'</div>';
     wall.appendChild(card);
+
     try{
-      const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,width:w,height:h,seed:-1,ref_image_base64:refB64,model:batchModel})});
-      const data=await res.json();
-      if(data.task_id){
-        tasks.push({idx:i,colorName,task_id:data.task_id,done:false});
-        card.querySelector('span:last-child').textContent='等待生成...';
-        // 等待上一个任务完成再提交下一个（并发限制为1）
-        if(i < colors.length - 1) {
-          await new Promise(r=>setTimeout(r, 3000));
-        }
-      } else {
-        card.innerHTML='<div style="aspect-ratio:1;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--red);">提交失败</div><div style="padding:8px 10px;font-size:12px;">'+colorName+'<br><span style="font-size:10px;color:var(--red);">'+(data.error||'未知')+'</span></div>';
+      const submitRes=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,width:w,height:h,seed:-1,ref_image_base64:refB64,model:batchModel})});
+      const submitData=await submitRes.json();
+
+      if(!submitData.task_id){
+        card.innerHTML='<div style="aspect-ratio:1;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--red);padding:8px;text-align:center;">提交失败</div><div style="padding:8px 10px;font-size:12px;">'+colorName+'<br><span style="font-size:10px;color:var(--red);">'+(submitData.error||'未知错误')+'</span></div>';
+        continue;
       }
+
+      card.querySelector('span:last-child').textContent='生成中...';
+
+      let done=false;
+      for(let t=0;t<60;t++){
+        await new Promise(r=>setTimeout(r,2000));
+        try{
+          const qRes=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'query',task_id:submitData.task_id})});
+          const qData=await qRes.json();
+          if(qData.status==='done'&&qData.urls&&qData.urls.length){
+            done=true;
+            const url=qData.urls[0];
+            batchResults.push({color:colorName,url});
+            card.innerHTML='<img src="'+url+'" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;"><div style="padding:8px 10px;"><div style="font-size:12px;font-weight:500;">'+colorName+'</div><div style="font-size:10px;color:var(--green);">✓ 生成成功</div></div>';
+            break;
+          }
+          if(qData.status==='failed'){
+            done=true;
+            card.innerHTML='<div style="aspect-ratio:1;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--red);">生图失败</div><div style="padding:8px 10px;font-size:12px;">'+colorName+'</div>';
+            break;
+          }
+        }catch(e){}
+      }
+
+      if(!done){
+        card.innerHTML='<div style="aspect-ratio:1;background:var(--amber-light);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--amber);">超时，请重试</div><div style="padding:8px 10px;font-size:12px;">'+colorName+'</div>';
+      }
+
+      if(i<total-1) await new Promise(r=>setTimeout(r,2000));
+
     }catch(err){
       card.innerHTML='<div style="aspect-ratio:1;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--red);">网络错误</div><div style="padding:8px 10px;font-size:12px;">'+colorName+'</div>';
     }
   }
 
-  document.getElementById('batchStatusText').textContent='已提交 '+tasks.length+' 个任务，轮询结果中...';
-  document.getElementById('batchProgressFill').style.width='30%';
-
-  // Step2: 前端轮询所有任务结果（每2秒查一次，最多等80秒）
-  for(let t=0;t<60&&tasks.some(x=>!x.done);t++){
-    await new Promise(r=>setTimeout(r,2000));
-    for(const task of tasks){
-      if(task.done) continue;
-      try{
-        const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'query',task_id:task.task_id})});
-        const data=await res.json();
-        const card=document.getElementById('bc_'+task.idx);
-        if(data.status==='done'&&data.urls&&data.urls.length){
-          task.done=true;
-          const url=data.urls[0];
-          batchResults.push({color:task.colorName,url});
-          card.innerHTML='<img src="'+url+'" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;"><div style="padding:8px 10px;"><div style="font-size:12px;font-weight:500;">'+task.colorName+'</div><div style="font-size:10px;color:var(--text3);">✓ 生成成功</div></div>';
-        } else if(data.status==='failed'){
-          task.done=true;
-          card.innerHTML='<div style="aspect-ratio:1;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--red);">生图失败</div><div style="padding:8px 10px;font-size:12px;">'+task.colorName+'</div>';
-        }
-      }catch(e){}
-    }
-    const done=tasks.filter(x=>x.done).length;
-    document.getElementById('batchProgressFill').style.width=''+(30+Math.round(done/Math.max(tasks.length,1)*70))+'%';
-    document.getElementById('batchStatusText').textContent='已完成 '+done+'/'+tasks.length+' 张...';
-  }
-
-  for(const task of tasks){
-    if(!task.done){
-      const card=document.getElementById('bc_'+task.idx);
-      card.innerHTML='<div style="aspect-ratio:1;background:var(--amber-light);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--amber);">超时</div><div style="padding:8px 10px;font-size:12px;">'+task.colorName+'</div>';
-    }
-  }
-
   document.getElementById('batchProgressFill').style.width='100%';
-  document.getElementById('batchStatusText').textContent='完成：'+batchResults.length+'/'+colors.length+' 张成功';
+  document.getElementById('batchStatusText').textContent='完成：'+batchResults.length+'/'+total+' 张成功';
   document.getElementById('batchGenBtn').disabled=false;
   document.getElementById('batchGenBtn').textContent='重新生成';
   if(batchResults.length>0){
