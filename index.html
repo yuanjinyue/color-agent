@@ -871,8 +871,8 @@ if(savedUser){ S.user=savedUser; document.getElementById('loginOverlay').style.d
     <div class="section">
       <div class="slabel">模型版本</div>
       <div class="chip-row" id="modelChips">
-        <div class="chip on" data-v="jimeng_t2i_v3">文生图 3.0</div>
-        <div class="chip" data-v="jimeng_t2i_v3_1">文生图 3.1</div>
+        <div class="chip on" data-v="jimeng_i2i_v30">图生图 3.0</div>
+        <div class="chip" data-v="jimeng_i2i_v40">图生图 4.0</div>
       </div>
     </div>
   </div>
@@ -895,7 +895,7 @@ if(savedUser){ S.user=savedUser; document.getElementById('loginOverlay').style.d
 <script>
 // ══ BATCH GENERATE ══
 let batchColors=[{color:'香槟金'},{color:'丁香紫'},{color:'玫瑰金'},{color:'抹茶绿'}];
-let batchSize='1024x1024', batchModel='jimeng_t2i_v3', batchResults=[];
+let batchSize='1024x1024', batchModel='jimeng_i2i_v30', batchResults=[];
 
 function renderBatchColorList(){
   const list=document.getElementById('batchColorList'); if(!list)return;
@@ -946,7 +946,7 @@ async function startBatchGen(){
   const refB64=window._refImgBase64||null;
   const wall=document.getElementById('batchResultWall');
 
-  // Step1: 逐个提交任务
+  // Step1: 串行提交任务（即梦并发限制为1）
   const tasks=[];
   for(let i=0;i<colors.length;i++){
     const colorName=colors[i].color.trim();
@@ -958,11 +958,15 @@ async function startBatchGen(){
     card.innerHTML='<div style="aspect-ratio:1;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;"><span class="spin"></span><span style="font-size:11px;color:var(--text3);">提交中...</span></div><div style="padding:8px 10px;font-size:12px;font-weight:500;">'+colorName+'</div>';
     wall.appendChild(card);
     try{
-      const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,width:w,height:h,seed:-1,ref_image_base64:refB64})});
+      const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,width:w,height:h,seed:-1,ref_image_base64:refB64,model:batchModel})});
       const data=await res.json();
       if(data.task_id){
         tasks.push({idx:i,colorName,task_id:data.task_id,done:false});
         card.querySelector('span:last-child').textContent='等待生成...';
+        // 等待上一个任务完成再提交下一个（并发限制为1）
+        if(i < colors.length - 1) {
+          await new Promise(r=>setTimeout(r, 3000));
+        }
       } else {
         card.innerHTML='<div style="aspect-ratio:1;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--red);">提交失败</div><div style="padding:8px 10px;font-size:12px;">'+colorName+'<br><span style="font-size:10px;color:var(--red);">'+(data.error||'未知')+'</span></div>';
       }
@@ -975,7 +979,7 @@ async function startBatchGen(){
   document.getElementById('batchProgressFill').style.width='30%';
 
   // Step2: 前端轮询所有任务结果（每2秒查一次，最多等80秒）
-  for(let t=0;t<40&&tasks.some(x=>!x.done);t++){
+  for(let t=0;t<60&&tasks.some(x=>!x.done);t++){
     await new Promise(r=>setTimeout(r,2000));
     for(const task of tasks){
       if(task.done) continue;
