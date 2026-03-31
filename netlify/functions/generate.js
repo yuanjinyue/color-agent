@@ -63,7 +63,7 @@ exports.handler = async (event) => {
   const { prompt, width = 1024, height = 1024, seed = -1 } = reqBody;
   if (!prompt) return { statusCode: 400, headers, body: JSON.stringify({ error: '缺少 prompt' }) };
 
-  // 使用 high_aes_general_v30 — 即梦文生图3.0 正式 req_key
+  // 使用 jimeng_t2i_v30 — 即梦文生图3.0 正式 req_key
   const volcBody = JSON.stringify({
     req_key: 'jimeng_t2i_v30',
     prompt,
@@ -102,8 +102,8 @@ exports.handler = async (event) => {
     if (!taskId) return { statusCode: 500, headers, body: JSON.stringify({ error: '未获取到 task_id' }) };
 
     // 轮询结果，最多等 60 秒
-    for (let i = 0; i < 30; i++) {
-      await new Promise(r => setTimeout(r, 2000));
+    for (let i = 0; i < 15; i++) {
+      await new Promise(r => setTimeout(r, 1500));
 
       const queryBody = JSON.stringify({ task_id: taskId });
       const { datetime: qdt, authorization: qauth, bodyHash: qhash } = signQuery(SK, AK, queryBody, 'CVSync2AsyncGetResult');
